@@ -4,15 +4,16 @@ import logging
 import asyncio
 import aiohttp
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, InputFile
-from telegram.ext import (
-    Application, CommandHandler, CallbackQueryHandler, ContextTypes
-)
+from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-BOT_TOKEN = "8306200181:AAHP56BkD6eZOcqjI6MZNrMdU7M06S0tIrs"
-BLOCKONOMICS_KEY = "Z3iMV7YBEl9dk6yla6j8YDT3zNvAkho4MyQ27ridgnI"
+# =========================
+# CONFIG
+# =========================
+BOT_TOKEN = os.environ.get("BOT_TOKEN")
+BLOCKONOMICS_KEY = os.environ.get("BLOCKONOMICS_KEY")
 VIDEO_URL = "https://ik.imagekit.io/myrnjevjk/game%20over.mp4?updatedAt=1754980438031"
 
 # =========================
@@ -61,12 +62,9 @@ async def get_btc_price_usd() -> float:
                 if r.status == 200:
                     data = await r.json()
                     return float(data.get("price", 50000.0))
-                else:
-                    logger.warning(f"Price API returned status {r.status}")
-                    return 50000.0
     except Exception as e:
         logger.error(f"Error fetching BTC price: {e}")
-        return 50000.0
+    return 50000.0
 
 async def generate_btc_address() -> str:
     url = "https://www.blockonomics.co/api/new_address"
@@ -87,31 +85,32 @@ async def check_payment(address: str) -> bool:
         async with aiohttp.ClientSession() as session:
             async with session.get(url, headers=headers) as r:
                 if r.status != 200:
-                    logger.warning(f"Searchhistory returned {r.status}")
                     return False
                 data = await r.json()
                 for tx in data.get("history", []):
-                    if tx.get("status") == 2:  # confirmed
+                    if tx.get("status") == 2:
                         return True
     except Exception as e:
         logger.error(f"Error checking payment: {e}")
     return False
 
 # =========================
-# BOT HANDLERS
+# MENU HELPERS
 # =========================
 async def show_main_menu(query=None, update=None):
     keyboard = []
     for key, cat in CATEGORIES.items():
         keyboard.append([InlineKeyboardButton(f"{cat['emoji']} {key.capitalize()}", callback_data=f"cat:{key}")])
     reply_markup = InlineKeyboardMarkup(keyboard)
-
     text = "🛒 *Main Menu*:\nChoose a category:"
     if query:
         await query.edit_message_text(text=text, reply_markup=reply_markup, parse_mode="Markdown")
     elif update:
         await update.message.reply_text(text, reply_markup=reply_markup, parse_mode="Markdown")
 
+# =========================
+# BOT HANDLERS
+# =========================
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         await context.bot.send_video(
@@ -123,7 +122,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception as e:
         logger.error(f"Video send failed: {e}")
         await update.message.reply_text("💀 Welcome to TTW's Null_Bot 💀")
-
     await show_main_menu(update=update)
 
 async def category_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -136,7 +134,6 @@ async def category_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     for item_id, item in category["items"].items():
         keyboard.append([InlineKeyboardButton(f"{item['emoji']} {item['name']} - ${item['price']}", callback_data=f"item:{cat_key}:{item_id}")])
     keyboard.append([InlineKeyboardButton("⬅️ Back", callback_data="back:main")])
-
     await query.edit_message_text(f"{category['emoji']} *{cat_key.capitalize()}*:\n\nSelect an item:", reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")
 
 async def item_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -174,7 +171,6 @@ async def buy_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     context.user_data["purchase"] = {"item": item, "address": address, "amount": amount_btc, "delivered": False}
-
     await query.edit_message_text(
         f"💀 *{item['name']}*\n💵 Price: ${item['price']}\n₿ Send exactly: *{amount_btc} BTC*\n➡ To Address: `{address}`\n\nPayment will be verified automatically!",
         parse_mode="Markdown"
@@ -187,23 +183,16 @@ async def auto_verify_payment(update: Update, context: ContextTypes.DEFAULT_TYPE
         return
     item = purchase["item"]
     address = purchase["address"]
-
-    for _ in range(60):  # check 30 min
-        paid = await check_payment(address)
-        if paid:
-            file_path = item["file"]
-            if os.path.exists(file_path):
-                await context.bot.send_message(chat_id=update.effective_chat.id, text=f"✅ Payment confirmed! Delivering *{item['name']}*...", parse_mode="Markdown")
-                await context.bot.send_document(chat_id=update.effective_chat.id, document=InputFile(file_path))
-                purchase["delivered"] = True
-                return
-            else:
-                await context.bot.send_message(chat_id=update.effective_chat.id, text="⚠ File missing on server.")
-                return
+    while not purchase.get("delivered"):
+        if await check_payment(address):
+            await update.effective_chat.send_document(document=InputFile(item["file"]), caption=f"✅ Payment received! Here is your {item['name']}")
+            purchase["delivered"] = True
+            break
         await asyncio.sleep(30)
-    if not purchase.get("delivered"):
-        await context.bot.send_message(chat_id=update.effective_chat.id, text="❌ Payment not found. Please try again later.")
 
+# =========================
+# MAIN
+# =========================
 def main():
     app = Application.builder().token(BOT_TOKEN).build()
 
