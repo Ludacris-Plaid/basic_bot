@@ -1,28 +1,28 @@
 import os
 import json
 import logging
-from telegram import Update, InputFile, Bot
-from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
-from aiohttp import web
 import aiohttp
+from telegram import Update, InputFile
+from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 
-# =========================
+# -------------------
 # CONFIG
 BOT_TOKEN = "8306200181:AAHP56BkD6eZOcqjI6MZNrMdU7M06S0tIrs"
 BLOCKONOMICS_API_KEY = "upSaWm3RiAS60lWT8One1HCIiprfDnJADadJE8z3e0c"
-VIDEO_PATH = "https://ik.imagekit.io/myrnjevjk/game%20over.mp4?updatedAt=1754980438031"
+VIDEO_URL = "https://ik.imagekit.io/myrnjevjk/game%20over.mp4?updatedAt=1754980438031"
 ADDRESS_FILE = "btc_addresses.json"
 PORT = 10000
 RETRIES = 3
 RETRY_DELAY = 2
-# =========================
+# -------------------
 
 logging.basicConfig(
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    level=logging.INFO
 )
 logger = logging.getLogger(__name__)
 
-# Ensure address file exists
+# Ensure JSON storage exists
 if not os.path.exists(ADDRESS_FILE):
     with open(ADDRESS_FILE, "w") as f:
         json.dump([], f)
@@ -31,16 +31,14 @@ if not os.path.exists(ADDRESS_FILE):
 async def generate_btc_address():
     url = "https://www.blockonomics.co/api/new_address"
     headers = {"Authorization": f"Bearer {BLOCKONOMICS_API_KEY}"}
-
     try:
         async with aiohttp.ClientSession() as session:
             async with session.get(url, headers=headers) as resp:
                 if resp.status == 200:
                     data = await resp.json()
                     return data.get("address")
-                else:
-                    logger.warning(f"BTC API returned status {resp.status}")
-                    return None
+                logger.warning(f"BTC API returned status {resp.status}")
+                return None
     except Exception as e:
         logger.error(f"BTC generation failed: {e}")
         return None
@@ -73,43 +71,41 @@ async def test_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     store_btc_address(btc_address, user_id)
 
-    if os.path.exists(VIDEO_PATH):
-        await update.message.reply_video(
-            InputFile(VIDEO_PATH),
-            caption=f"✅ Your BTC address: `{btc_address}`",
-            parse_mode="Markdown",
-        )
-    else:
-        await update.message.reply_text(
-            f"✅ Your BTC address: `{btc_address}`\n⚠️ Video not found. Skipping .mp4.",
-            parse_mode="Markdown",
-        )
+    # Download video from remote URL and send
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(VIDEO_URL) as resp:
+                if resp.status == 200:
+                    video_bytes = await resp.read()
+                    await update.message.reply_video(
+                        video=video_bytes,
+                        caption=f"✅ Your BTC address: `{btc_address}`",
+                        parse_mode="Markdown",
+                    )
+                    return
+                else:
+                    logger.warning(f"Video URL returned status {resp.status}")
+    except Exception as e:
+        logger.error(f"Failed to fetch video: {e}")
 
-# --- Webhook setup ---
+    # Fallback if video fails
+    await update.message.reply_text(
+        f"✅ Your BTC address: `{btc_address}`\n⚠️ Could not load video.",
+        parse_mode="Markdown",
+    )
+
+# --- Main ---
 async def main():
     app = ApplicationBuilder().token(BOT_TOKEN).build()
     app.add_handler(CommandHandler("test", test_command))
 
-    # Aiohttp server for Render
-    async def handle(request):
-        data = await request.json()
-        update = Update.de_json(data, app.bot)
-        await app.update_queue.put(update)
-        return web.Response(text="ok")
-
-    web_app = web.Application()
-    web_app.router.add_post(f"/{BOT_TOKEN}", handle)
-    runner = web.AppRunner(web_app)
-    await runner.setup()
-    site = web.TCPSite(runner, "0.0.0.0", PORT)
-    await site.start()
-    logger.info(f"Bot webhook listening on port {PORT}")
-
-    # Start Application
-    await app.initialize()
-    await app.start()
-    await app.updater.start()
-    await app.updater.wait_closed()
+    # Render webhook
+    await app.run_webhook(
+        listen="0.0.0.0",
+        port=PORT,
+        webhook_path=f"/{BOT_TOKEN}",
+        webhook_url=f"https://YOUR_RENDER_APP_NAME.onrender.com/{BOT_TOKEN}"
+    )
 
 if __name__ == "__main__":
     import asyncio
