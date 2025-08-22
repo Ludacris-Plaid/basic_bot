@@ -249,14 +249,14 @@ async def about_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
     
-    about_text = """ℹ️ *About Digital Store*
+    about_text = """ℹ️ *TTW's Null_Bot*
 
-We provide high-quality digital products to help you learn, grow, and succeed:
+We provide high-quality digital products to help you tax the world for profit and lulz:
 
-🎓 **Courses**: Professional training materials
-🎨 **Templates**: Ready-to-use designs
-📚 **Ebooks**: Comprehensive guides
-🛠️ **Tools**: Useful applications and resources
+🎓 **ScamPages**: The highest quality coded scampages on the darkweb just add tele bot token
+🎨 **Tutorials**: Freshly hacked from a major DB hack by @therealdysthemix current to 24/25
+📚 **Data**: Fullz, Profiles, CVV's and other data freshly spammed
+🛠️ **Tools**: Spamming, hacking, carding and other kinds of tools
 
 All products are:
 ✅ Instantly downloadable
@@ -283,9 +283,9 @@ async def support_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 Need help? We're here for you!
 
-📧 **Email**: support@digitalstore.com
-💬 **Telegram**: @DigitalStoreSupport
-⏰ **Hours**: 9 AM - 6 PM EST (Mon-Fri)
+📧 **Email**: dayglowgiggles@proton.me
+💬 **Telegram**: @therealdysthemix
+⏰ **Hours**: 9 AM - 12 AM MST
 
 **Common Questions:**
 • Products are delivered instantly after payment
