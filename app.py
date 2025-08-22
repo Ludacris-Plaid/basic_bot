@@ -92,18 +92,13 @@ async def test_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 # Main
-async def main():
-    app = ApplicationBuilder().token(BOT_TOKEN).build()
-    app.add_handler(CommandHandler("test", test_command))
+app = ApplicationBuilder().token(BOT_TOKEN).build()
+app.add_handler(CommandHandler("test", test_command))
 
-    # Run webhook (Render-ready)
-    await app.run_webhook(
-        listen="0.0.0.0",
-        port=PORT,
-        url_path=BOT_TOKEN,  # <-- corrected
-        webhook_url=f"https://YOUR_RENDER_APP_NAME.onrender.com/{BOT_TOKEN}"
-    )
-
-if __name__ == "__main__":
-    import asyncio
-    asyncio.run(main())
+# Run webhook directly (do NOT use asyncio.run)
+app.run_webhook(
+    listen="0.0.0.0",
+    port=PORT,
+    url_path=BOT_TOKEN,  # correct for v21+
+    webhook_url=f"https://YOUR_RENDER_APP_NAME.onrender.com/{BOT_TOKEN}"
+)
