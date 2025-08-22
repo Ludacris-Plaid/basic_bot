@@ -1,15 +1,15 @@
 import os
 import json
-import asyncio
 import logging
 from telegram import Update, InputFile
-from telegram.ext import Application, CommandHandler, ContextTypes, ApplicationBuilder
+from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 import aiohttp
+from aiohttp import web
 
 # =========================
-# CONFIG
-BOT_TOKEN = os.getenv("8306200181:AAHP56BkD6eZOcqjI6MZNrMdU7M06S0tIrs")
-BLOCKONOMICS_API_KEY = os.getenv("upSaWm3RiAS60lWT8One1HCIiprfDnJADadJE8z3e0c")
+# CONFIG - using provided credentials
+BOT_TOKEN = "8306200181:AAHP56BkD6eZOcqjI6MZNrMdU7M06S0tIrs"
+BLOCKONOMICS_API_KEY = "upSaWm3RiAS60lWT8One1HCIiprfDnJADadJE8z3e0c"
 VIDEO_PATH = "https://ik.imagekit.io/myrnjevjk/game%20over.mp4?updatedAt=1754980438031"
 ADDRESS_FILE = "btc_addresses.json"
 PORT = 10000
@@ -88,19 +88,29 @@ async def test_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             parse_mode="Markdown",
         )
 
-# --- Main ---
+# --- Webhook setup for Render ---
 async def main():
-    if not BOT_TOKEN or not BLOCKONOMICS_API_KEY:
-        logger.error("BOT_TOKEN or BLOCKONOMICS_API_KEY environment variables not set!")
-        return
-
     app = ApplicationBuilder().token(BOT_TOKEN).build()
     app.add_handler(CommandHandler("test", test_command))
 
-    logger.info(f"Production bot starting on port {PORT}...")
-    
-    # Use run_polling for simplicity (Render can expose this port)
-    await app.run_polling()
+    # Use aiohttp server for Render webhook
+    async def handle(request):
+        update = Update.de_json(await request.json(), app.bot)
+        await app.update_queue.put(update)
+        return web.Response(text="ok")
+
+    runner = web.AppRunner(web.Application())
+    await runner.setup()
+    site = web.TCPSite(runner, "0.0.0.0", PORT)
+    logger.info(f"Production bot running on port {PORT}")
+    await site.start()
+
+    # Start Telegram application
+    await app.initialize()
+    await app.start()
+    await app.updater.start_polling()  # queue processor
+    await app.updater.idle()
 
 if __name__ == "__main__":
+    import asyncio
     asyncio.run(main())
