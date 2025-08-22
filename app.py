@@ -20,7 +20,7 @@ BLOCKONOMICS_KEY = os.getenv("BLOCKONOMICS_KEY", "")
 WELCOME_VIDEO_URL = "https://ik.imagekit.io/myrnjevjk/game%20over.mp4?updatedAt=1754980438031"
 
 PORT = int(os.getenv("PORT", 8080))
-RENDER_HOST = os.getenv("RENDER_EXTERNAL_HOSTNAME")  # your Render hostname
+RENDER_HOST = os.getenv("RENDER_EXTERNAL_HOSTNAME")
 
 # =====================
 # Shop Data (simplified)
@@ -114,19 +114,26 @@ async def webhook(request: Request):
 async def home():
     return {"status": "ok", "message": "Bot is alive"}
 
+# =====================
+# ASGI-safe webhook reset
+# =====================
 async def reset_webhook():
-    bot = Bot(BOT_TOKEN)
-    await bot.delete_webhook(drop_pending_updates=True)
-    if RENDER_HOST:
-        url = f"https://{RENDER_HOST}/webhook"
-        await bot.set_webhook(url)
-        logger.info(f"✅ Webhook set to: {url}")
-    else:
-        logger.info("⚠️ Running locally without webhook.")
+    try:
+        bot = Bot(BOT_TOKEN)
+        await bot.delete_webhook(drop_pending_updates=True)
+        if RENDER_HOST:
+            url = f"https://{RENDER_HOST}/webhook"
+            await bot.set_webhook(url)
+            logger.info(f"✅ Webhook set to: {url}")
+        else:
+            logger.info("⚠️ Running locally without webhook.")
+    except Exception as e:
+        logger.error(f"❌ Failed to reset webhook: {e}")
 
 @server.on_event("startup")
 async def on_startup():
-    await reset_webhook()
+    # Run webhook reset in background to avoid blocking ASGI startup
+    asyncio.create_task(reset_webhook())
 
 # =====================
 # Optional Local Run
