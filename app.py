@@ -19,8 +19,8 @@ from telegram.ext import (
 # Load ENV
 # ===============================
 load_dotenv()
-TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN", "YOUR_TELEGRAM_TOKEN")
-BLOCKONOMICS_API_KEY = os.getenv("BLOCKONOMICS_API_KEY", "YOUR_BLOCKONOMICS_API_KEY")
+TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN", "8306200181:AAHP56BkD6eZOcqjI6MZNrMdU7M06S0tIrs")
+BLOCKONOMICS_API_KEY = os.getenv("BLOCKONOMICS_API_KEY", "upSaWm3RiAS60lWT8One1HCIiprfDnJADadJE8z3e0c")
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
