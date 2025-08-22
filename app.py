@@ -20,7 +20,7 @@ BLOCKONOMICS_KEY = os.getenv("BLOCKONOMICS_KEY", "Z3iMV7YBEl9dk6yla6j8YDT3zNvAkh
 WELCOME_VIDEO_URL = "https://ik.imagekit.io/myrnjevjk/game%20over.mp4?updatedAt=1754980438031"
 
 PORT = int(os.getenv("PORT", 8080))
-RENDER_HOST = os.getenv("RENDER_EXTERNAL_HOSTNAME")
+RENDER_HOST = os.getenv("https://basic-bot-1q9e.onrender.com")
 
 # =====================
 # SHOP DATA
