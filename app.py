@@ -1,4 +1,3 @@
-
 import os
 import json
 import logging
@@ -124,7 +123,7 @@ async def generate_btc_address() -> str:
     if not BLOCKONOMICS_KEY:
         # For demo purposes, return a dummy address
         return "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh"
-    
+
     url = "https://www.blockonomics.co/api/new_address"
     headers = {"Authorization": f"Bearer {BLOCKONOMICS_KEY}"}
     try:
@@ -142,7 +141,7 @@ async def check_payment(address: str, expected_amount: float) -> bool:
         # For demo purposes, simulate payment after 2 minutes
         await asyncio.sleep(120)
         return True
-    
+
     url = f"https://www.blockonomics.co/api/address/{address}"
     headers = {"Authorization": f"Bearer {BLOCKONOMICS_KEY}"}
     try:
@@ -168,14 +167,14 @@ async def show_main_menu(query=None, update=None):
             f"{cat['emoji']} {key.replace('_', ' ').title()}", 
             callback_data=f"cat:{key}"
         )])
-    
+
     # Add additional options
     keyboard.append([InlineKeyboardButton("ℹ️ About", callback_data="about")])
     keyboard.append([InlineKeyboardButton("📞 Support", callback_data="support")])
-    
+
     reply_markup = InlineKeyboardMarkup(keyboard)
     text = " *☠️ Null_Bot ☠️*\n\nChoose a category to browse our products:"
-    
+
     if query:
         await query.edit_message_text(text=text, reply_markup=reply_markup, parse_mode="Markdown")
     elif update:
@@ -185,7 +184,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle /start command"""
     user = update.effective_user
     welcome_text = ☠️TTW's Null_Bot☠️\n f"📢 Welcome {user.first_name}!\n\n 🌐 Crack the code, tax the globe 🌐
-    
+
     # Try to send welcome video if URL is provided
     if WELCOME_VIDEO_URL:
         try:
@@ -235,9 +234,9 @@ async def item_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [InlineKeyboardButton("💰 Buy Now", callback_data=f"buy:{cat_key}:{item_id}")],
         [InlineKeyboardButton("⬅️ Back", callback_data=f"cat:{cat_key}")]
     ]
-    
+
     description = item.get("description", "No description available.")
-    
+
     await query.edit_message_text(
         f"📦 *{item['name']}*\n\n📝 {description}\n\n💵 Price: ${item['price']}\n\nReady to purchase?",
         reply_markup=InlineKeyboardMarkup(keyboard),
@@ -248,7 +247,7 @@ async def about_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle about section"""
     query = update.callback_query
     await query.answer()
-    
+
     about_text = """☠️*TTW's Null_Bot*☠️
 
 🚨 We provide high-quality digital products to help you tax the world for profit and lulz:
@@ -267,7 +266,7 @@ All products are:
 💳 We accept Bitcoin payments for secure, anonymous transactions."""
 
     keyboard = [[InlineKeyboardButton("⬅️ Back to Menu", callback_data="back:main")]]
-    
+
     await query.edit_message_text(
         about_text,
         reply_markup=InlineKeyboardMarkup(keyboard),
@@ -278,7 +277,7 @@ async def support_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle support section"""
     query = update.callback_query
     await query.answer()
-    
+
     support_text = """📞 *Customer Support*
 
 Need help? We're here for you!
@@ -296,7 +295,7 @@ Need help? We're here for you!
 If you experience payment problems, contact @therealdysthemix with your transaction details."""
 
     keyboard = [[InlineKeyboardButton("⬅️ Back to Menu", callback_data="back:main")]]
-    
+
     await query.edit_message_text(
         support_text,
         reply_markup=InlineKeyboardMarkup(keyboard),
@@ -320,7 +319,7 @@ async def buy_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Get BTC price and calculate amount
     btc_usd = await get_btc_price_usd()
     amount_btc = round(item["price"] / btc_usd, 8)
-    
+
     # Generate payment address
     address = await generate_btc_address()
     if not address:
@@ -353,13 +352,13 @@ async def buy_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 ⏱️ Payment expires in 30 minutes"""
 
     keyboard = [[InlineKeyboardButton("❌ Cancel", callback_data="back:main")]]
-    
+
     await query.edit_message_text(
         payment_text,
         reply_markup=InlineKeyboardMarkup(keyboard),
         parse_mode="Markdown"
     )
-    
+
     # Start payment verification
     asyncio.create_task(verify_payment_loop(update, context))
 
@@ -368,21 +367,21 @@ async def verify_payment_loop(update: Update, context: ContextTypes.DEFAULT_TYPE
     purchase = context.user_data.get("purchase")
     if not purchase or purchase.get("delivered"):
         return
-    
+
     item = purchase["item"]
     address = purchase["address"]
     amount = purchase["amount"]
-    
+
     # Check for payment for 30 minutes (60 checks, 30 seconds apart)
     for i in range(60):
         if purchase.get("delivered"):  # Check if already delivered
             return
-            
+
         paid = await check_payment(address, amount)
         if paid:
             await deliver_product(update, context, item)
             return
-            
+
         # Send status update every 10 checks (5 minutes)
         if i > 0 and i % 10 == 0:
             remaining_time = 30 - (i * 0.5)
@@ -390,9 +389,9 @@ async def verify_payment_loop(update: Update, context: ContextTypes.DEFAULT_TYPE
                 chat_id=update.effective_chat.id,
                 text=f"⏳ Still waiting for payment... {remaining_time:.0f} minutes remaining"
             )
-        
+
         await asyncio.sleep(30)
-    
+
     # Payment timeout
     if not purchase.get("delivered"):
         await context.bot.send_message(
@@ -405,9 +404,9 @@ async def deliver_product(update: Update, context: ContextTypes.DEFAULT_TYPE, it
     purchase = context.user_data.get("purchase", {})
     if purchase.get("delivered"):
         return
-    
+
     file_path = item["file"]
-    
+
     try:
         # Send confirmation message
         await context.bot.send_message(
@@ -415,7 +414,7 @@ async def deliver_product(update: Update, context: ContextTypes.DEFAULT_TYPE, it
             text=f"✅ *Payment Confirmed!*\n\n📦 Delivering: {item['name']}\n\nThank you for your purchase! 🎉",
             parse_mode="Markdown"
         )
-        
+
         # Send the file
         if os.path.exists(file_path):
             with open(file_path, 'rb') as file:
@@ -432,13 +431,13 @@ async def deliver_product(update: Update, context: ContextTypes.DEFAULT_TYPE, it
                 chat_id=update.effective_chat.id,
                 text=f"📧 Your download link will be sent to you shortly via email.\n\nIf you don't receive it within 10 minutes, please contact support."
             )
-        
+
         # Mark as delivered
         purchase["delivered"] = True
-        
+
         # Send receipt/invoice
         await send_receipt(update, context, item)
-        
+
     except Exception as e:
         logger.error(f"Error delivering product: {e}")
         await context.bot.send_message(
@@ -450,7 +449,7 @@ async def send_receipt(update: Update, context: ContextTypes.DEFAULT_TYPE, item:
     """Send purchase receipt"""
     user = update.effective_user
     purchase = context.user_data.get("purchase", {})
-    
+
     receipt_text = f"""🧾 *Purchase Receipt*
 
 **Customer**: {user.first_name} {user.last_name or ''}
@@ -474,7 +473,7 @@ def main():
     if not BOT_TOKEN or BOT_TOKEN == "YOUR_BOT_TOKEN_HERE":
         print("❌ Please set your BOT_TOKEN in the configuration section")
         return
-    
+
     # Create application
     app = Application.builder().token(BOT_TOKEN).build()
 
@@ -493,8 +492,7 @@ def main():
     print("   1. Create a 'files' directory with your digital products")
     print("   2. Set up your Blockonomics API key for real payments")
     print("   3. Add your actual product files")
-    
+
     app.run_polling()
 
 if __name__ == "__main__":
-    main()
