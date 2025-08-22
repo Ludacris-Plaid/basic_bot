@@ -183,7 +183,11 @@ async def show_main_menu(query=None, update=None):
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle /start command"""
     user = update.effective_user
-    welcome_text = ☠️TTW's Null_Bot☠️\n f"📢 Welcome {user.first_name}!\n\n 🌐 Crack the code, tax the globe 🌐
+    welcome_text = (
+    "☠️TTW's Null_Bot☠️\n"
+    f"📢 Welcome {user.first_name}!\n\n"
+    "🌐 Crack the code, tax the globe 🌐"
+)
 
     # Try to send welcome video if URL is provided
     if WELCOME_VIDEO_URL:
