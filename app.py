@@ -3,9 +3,9 @@ import json
 import logging
 import aiohttp
 from telegram import Update
-from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes, CallbackContext
+from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 
-# -------------------
+# ======================
 # CONFIG
 BOT_TOKEN = "8306200181:AAHP56BkD6eZOcqjI6MZNrMdU7M06S0tIrs"
 BLOCKONOMICS_API_KEY = "upSaWm3RiAS60lWT8One1HCIiprfDnJADadJE8z3e0c"
@@ -14,17 +14,17 @@ ADDRESS_FILE = "btc_addresses.json"
 PORT = int(os.getenv("PORT", 10000))
 RETRIES = 3
 RETRY_DELAY = 2
-# -------------------
+# ======================
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Ensure address file exists
+# Ensure BTC address storage exists
 if not os.path.exists(ADDRESS_FILE):
     with open(ADDRESS_FILE, "w") as f:
         json.dump([], f)
 
-# --- BTC generator ---
+# --- BTC address functions ---
 async def generate_btc_address():
     url = "https://www.blockonomics.co/api/new_address"
     headers = {"Authorization": f"Bearer {BLOCKONOMICS_API_KEY}"}
@@ -56,7 +56,7 @@ def store_btc_address(address, user_id):
         f.seek(0)
         json.dump(data, f, indent=4)
 
-# --- Command handler ---
+# --- Telegram command handler ---
 async def test_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     await update.message.reply_text("⏳ Generating BTC address...")
@@ -68,7 +68,7 @@ async def test_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     store_btc_address(btc_address, user_id)
 
-    # Send video from URL using streaming
+    # Stream remote video via aiohttp
     try:
         async with aiohttp.ClientSession() as session:
             async with session.get(VIDEO_URL) as resp:
@@ -85,22 +85,23 @@ async def test_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception as e:
         logger.error(f"Failed to fetch video: {e}")
 
+    # Fallback if video fails
     await update.message.reply_text(
         f"✅ Your BTC address: `{btc_address}`\n⚠️ Could not load video.",
         parse_mode="Markdown"
     )
 
-# --- Main ---
+# --- Main function ---
 async def main():
-    app = ApplicationBuilder().token(BOT_TOKEN).build()  # no polling, will use webhook
+    app = ApplicationBuilder().token(BOT_TOKEN).build()
     app.add_handler(CommandHandler("test", test_command))
 
-    # Run webhook server (Render-ready)
+    # Run webhook (Render-ready)
     await app.run_webhook(
         listen="0.0.0.0",
         port=PORT,
         webhook_path=f"/{BOT_TOKEN}",
-        webhook_url=f"https://https://basic-bot-1q9e.onrender.com/{BOT_TOKEN}"
+        webhook_url=f"https://YOUR_RENDER_APP_NAME.onrender.com/{BOT_TOKEN}"
     )
 
 if __name__ == "__main__":
