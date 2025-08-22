@@ -21,7 +21,7 @@ WELCOME_VIDEO_URL = "https://ik.imagekit.io/myrnjevjk/game%20over.mp4?updatedAt=
 # LEGITIMATE SHOP DATA
 # =========================
 CATEGORIES = {
-    "scampages": {
+    "tutorials": {
         "emoji": "💻",
         "items": {
             "web_dev": {
@@ -40,7 +40,7 @@ CATEGORIES = {
             },
         },
     },
-    "templates": {
+    "scampages": {
         "emoji": "🎨",
         "items": {
             "website_templates": {
@@ -59,7 +59,7 @@ CATEGORIES = {
             },
         },
     },
-    "ebooks": {
+    "data": {
         "emoji": "📖",
         "items": {
             "business_guide": {
@@ -249,12 +249,12 @@ async def about_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
     
-    about_text = """ℹ️ *TTW's Null_Bot*
+    about_text = """☠️*TTW's Null_Bot*
 
-We provide high-quality digital products to help you tax the world for profit and lulz:
+🚨 We provide high-quality digital products to help you tax the world for profit and lulz:
 
 🎓 **ScamPages**: The highest quality coded scampages on the darkweb just add tele bot token
-🎨 **Tutorials**: Freshly hacked from a major DB hack by @therealdysthemix current to 24/25
+🎨 **Tutorials**: Freshly hacked from a major DB hack by @therealdysthemix 
 📚 **Data**: Fullz, Profiles, CVV's and other data freshly spammed
 🛠️ **Tools**: Spamming, hacking, carding, AI JailBreaks and other kinds of tools
 
