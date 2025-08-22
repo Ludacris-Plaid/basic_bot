@@ -498,5 +498,3 @@ def main():
     print("   3. Add your actual product files")
 
     app.run_polling()
-
-if __name__ == "__main__":
