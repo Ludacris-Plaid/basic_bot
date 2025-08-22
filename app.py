@@ -115,6 +115,7 @@ async def check_payment(address: str) -> bool:
 # TELEGRAM HANDLERS
 # =========================
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    logger.info("Received /start from %s", update.effective_chat.id)
     if WELCOME_VIDEO_URL:
         await update.message.reply_video(WELCOME_VIDEO_URL, caption="💀 Welcome to *TTW's Null_Bot* 💀", parse_mode="Markdown")
     else:
@@ -173,7 +174,10 @@ async def buy_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.edit_message_text("⚠ Could not generate BTC address. Try again later.")
         return
     context.user_data["purchase"] = {"item": item, "address": address, "amount": amount_btc, "delivered": False}
-    await query.edit_message_text(f"💀 *{item['name']}*\n💵 Price: ${item['price']}\n₿ Send exactly: *{amount_btc} BTC*\n➡ To Address: `{address}`\n\nPayment will be verified automatically!", parse_mode="Markdown")
+    await query.edit_message_text(
+        f"💀 *{item['name']}*\n💵 Price: ${item['price']}\n₿ Send exactly: *{amount_btc} BTC*\n➡ To Address: `{address}`\n\nPayment will be verified automatically!",
+        parse_mode="Markdown"
+    )
     asyncio.create_task(auto_verify_payment(update, context))
 
 async def auto_verify_payment(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -186,14 +190,13 @@ async def auto_verify_payment(update: Update, context: ContextTypes.DEFAULT_TYPE
         paid = await check_payment(address)
         if paid:
             file_path = item["file"]
-            if os.path.exists(file_path):
-                await context.bot.send_message(chat_id=update.effective_chat.id, text=f"✅ Payment confirmed! Delivering *{item['name']}*...", parse_mode="Markdown")
-                await context.bot.send_document(chat_id=update.effective_chat.id, document=InputFile(file_path))
-                purchase["delivered"] = True
-                return
-            else:
+            if not os.path.exists(file_path):
                 await context.bot.send_message(chat_id=update.effective_chat.id, text="⚠ File missing on server.")
                 return
+            await context.bot.send_message(chat_id=update.effective_chat.id, text=f"✅ Payment confirmed! Delivering *{item['name']}*...", parse_mode="Markdown")
+            await context.bot.send_document(chat_id=update.effective_chat.id, document=InputFile(file_path))
+            purchase["delivered"] = True
+            return
         await asyncio.sleep(30)
     if not purchase.get("delivered"):
         await context.bot.send_message(chat_id=update.effective_chat.id, text="❌ Payment not found. Please try again later.")
@@ -203,6 +206,7 @@ async def auto_verify_payment(update: Update, context: ContextTypes.DEFAULT_TYPE
 # =========================
 async def main():
     application = Application.builder().token(BOT_TOKEN).build()
+
     # Telegram handlers
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("help", help_cmd))
@@ -213,6 +217,7 @@ async def main():
 
     # Aiohttp web app
     web_app = web.Application()
+
     # Health check
     async def health(request):
         return web.Response(text="OK")
@@ -220,9 +225,13 @@ async def main():
 
     # Webhook endpoint
     async def telegram_webhook(request):
-        data = await request.json()
-        update = Update.de_json(data, application.bot)
-        await application.update_queue.put(update)
+        try:
+            data = await request.json()
+            logger.info("Received update: %s", data)
+            update = Update.de_json(data, application.bot)
+            await application.update_queue.put(update)
+        except Exception as e:
+            logger.error("Failed to process update: %s", e)
         return web.Response(text="ok")
     web_app.router.add_post(f"/webhook/{BOT_TOKEN}", telegram_webhook)
 
