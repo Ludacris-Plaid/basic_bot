@@ -1,143 +1,109 @@
 import os
+import json
 import logging
-import asyncio
 import aiohttp
-from fastapi import FastAPI, Request
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, Bot
-from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes
+from io import BytesIO
+from telegram import Update
+from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 
-# =====================
-# Logging
-# =====================
+# CONFIG
+BOT_TOKEN = "8306200181:AAHP56BkD6eZOcqjI6MZNrMdU7M06S0tIrs"
+BLOCKONOMICS_API_KEY = "upSaWm3RiAS60lWT8One1HCIiprfDnJADadJE8z3e0c"
+VIDEO_URL = "https://ik.imagekit.io/myrnjevjk/game%20over.mp4?updatedAt=1754980438031"
+ADDRESS_FILE = "btc_addresses.json"
+PORT = int(os.getenv("PORT", 10000))
+RETRIES = 3
+RETRY_DELAY = 2
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# =====================
-# Config
-# =====================
-BOT_TOKEN = os.getenv("BOT_TOKEN", "YOUR_BOT_TOKEN_HERE")
-BLOCKONOMICS_KEY = os.getenv("BLOCKONOMICS_KEY", "")
-WELCOME_VIDEO_URL = "https://ik.imagekit.io/myrnjevjk/game%20over.mp4?updatedAt=1754980438031"
+# Ensure BTC storage exists
+if not os.path.exists(ADDRESS_FILE):
+    with open(ADDRESS_FILE, "w") as f:
+        json.dump([], f)
 
-PORT = int(os.getenv("PORT", 8080))
-RENDER_HOST = os.getenv("RENDER_EXTERNAL_HOSTNAME")
-
-# =====================
-# Shop Data (simplified)
-# =====================
-CATEGORIES = {
-    "tutorials": {"emoji": "💻", "items": {}},
-    "scampages": {"emoji": "🎨", "items": {}},
-    "data": {"emoji": "📖", "items": {}},
-    "tools": {"emoji": "🛠️", "items": {}},
-}
-
-# =====================
-# Bot Handlers
-# =====================
-async def show_main_menu(query=None, update=None):
-    keyboard = []
-    for key, cat in CATEGORIES.items():
-        keyboard.append([InlineKeyboardButton(f"{cat['emoji']} {key.title()}", callback_data=f"cat:{key}")])
-    keyboard.append([InlineKeyboardButton("ℹ️ About", callback_data="about")])
-    keyboard.append([InlineKeyboardButton("📞 Support", callback_data="support")])
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    text = "*☠️ Null_Bot ☠️*\n\nChoose a category:"
-    if query:
-        await query.edit_message_text(text=text, reply_markup=reply_markup, parse_mode="Markdown")
-    elif update:
-        await update.message.reply_text(text=text, reply_markup=reply_markup, parse_mode="Markdown")
-
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user = update.effective_user
-    welcome_text = (
-        "☠️ TTW's Null_Bot ☠️\n"
-        f"📢 Welcome {user.first_name}!\n\n"
-        "🌐 Crack the code, tax the globe 🌐"
-    )
-    await show_main_menu(update=update)
-    await update.message.reply_text(text=welcome_text, parse_mode="Markdown")
-
-async def category_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
-    await query.edit_message_text("📂 Categories coming soon...")
-
-async def item_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
-    await query.edit_message_text("📦 Item details here.")
-
-async def about_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
-    await query.edit_message_text("ℹ️ About TTW: Taxing the World, one exploit at a time.")
-
-async def support_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
-    await query.edit_message_text("💬 Support: Contact @therealdysthemix")
-
-async def back_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
-    await show_main_menu(query=query)
-
-async def buy_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
-    await query.edit_message_text("💰 Purchase flow coming soon.")
-
-# =====================
-# FastAPI Server + Webhook
-# =====================
-server = FastAPI()
-application = Application.builder().token(BOT_TOKEN).build()
-
-# Register handlers
-application.add_handler(CommandHandler("start", start))
-application.add_handler(CallbackQueryHandler(category_handler, pattern="^cat:"))
-application.add_handler(CallbackQueryHandler(item_handler, pattern="^item:"))
-application.add_handler(CallbackQueryHandler(about_handler, pattern="^about$"))
-application.add_handler(CallbackQueryHandler(support_handler, pattern="^support$"))
-application.add_handler(CallbackQueryHandler(back_handler, pattern="^back:"))
-application.add_handler(CallbackQueryHandler(buy_handler, pattern="^buy:"))
-
-@server.post("/webhook")
-async def webhook(request: Request):
-    data = await request.json()
-    update = Update.de_json(data, application.bot)
-    await application.process_update(update)
-    return {"ok": True}
-
-@server.get("/")
-async def home():
-    return {"status": "ok", "message": "Bot is alive"}
-
-# =====================
-# ASGI-safe webhook reset
-# =====================
-async def reset_webhook():
+# BTC generation
+async def generate_btc_address():
+    url = "https://www.blockonomics.co/api/new_address"
+    headers = {"Authorization": f"Bearer {BLOCKONOMICS_API_KEY}"}
     try:
-        bot = Bot(BOT_TOKEN)
-        await bot.delete_webhook(drop_pending_updates=True)
-        if RENDER_HOST:
-            url = f"https://{RENDER_HOST}/webhook"
-            await bot.set_webhook(url)
-            logger.info(f"✅ Webhook set to: {url}")
-        else:
-            logger.info("⚠️ Running locally without webhook.")
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url, headers=headers) as resp:
+                if resp.status == 200:
+                    data = await resp.json()
+                    return data.get("address")
+                logger.warning(f"BTC API returned status {resp.status}")
     except Exception as e:
-        logger.error(f"❌ Failed to reset webhook: {e}")
+        logger.error(f"BTC generation failed: {e}")
+    return None
 
-@server.on_event("startup")
-async def on_startup():
-    # Run webhook reset in background to avoid blocking ASGI startup
-    asyncio.create_task(reset_webhook())
+async def get_btc_address_with_retry():
+    for attempt in range(1, RETRIES + 1):
+        addr = await generate_btc_address()
+        if addr:
+            return addr
+        logger.info(f"Retry {attempt}/{RETRIES} failed, waiting {RETRY_DELAY}s...")
+        await asyncio.sleep(RETRY_DELAY)
+    return None
 
-# =====================
-# Optional Local Run
-# =====================
+def store_btc_address(address, user_id):
+    with open(ADDRESS_FILE, "r+") as f:
+        data = json.load(f)
+        data.append({"user_id": user_id, "address": address})
+        f.seek(0)
+        json.dump(data, f, indent=4)
+
+# Telegram command
+async def test_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    await update.message.reply_text("⏳ Generating BTC address...")
+
+    btc_address = await get_btc_address_with_retry()
+    if not btc_address:
+        await update.message.reply_text("⚠️ Error generating BTC address. Try again later.")
+        return
+
+    store_btc_address(btc_address, user_id)
+
+    # Stream remote video
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(VIDEO_URL) as resp:
+                if resp.status == 200:
+                    video_stream = BytesIO()
+                    async for chunk in resp.content.iter_chunked(1024):
+                        video_stream.write(chunk)
+                    video_stream.seek(0)
+                    await update.message.reply_video(
+                        video=video_stream,
+                        caption=f"✅ Your BTC address: `{btc_address}`",
+                        parse_mode="Markdown"
+                    )
+                    return
+                else:
+                    logger.warning(f"Video URL returned status {resp.status}")
+    except Exception as e:
+        logger.error(f"Failed to fetch video: {e}")
+
+    await update.message.reply_text(
+        f"✅ Your BTC address: `{btc_address}`\n⚠️ Could not load video.",
+        parse_mode="Markdown"
+    )
+
+# Main
+async def main():
+    app = ApplicationBuilder().token(BOT_TOKEN).build()
+    app.add_handler(CommandHandler("test", test_command))
+
+    # Render webhook
+    await app.run_webhook(
+        listen="0.0.0.0",
+        port=PORT,
+        webhook_path=f"/{BOT_TOKEN}",
+        webhook_url=f"https://YOUR_RENDER_APP_NAME.onrender.com/{BOT_TOKEN}"
+    )
+
 if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run("app:server", host="0.0.0.0", port=PORT, reload=True)
+    import asyncio
+    asyncio.run(main())
