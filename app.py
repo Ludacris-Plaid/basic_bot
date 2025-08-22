@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 # =====================
 # Config
 # =====================
-BOT_TOKEN = os.getenv("BOT_TOKEN", "8306200181:AAHP56BkD6eZOcqjI6MZNrMdU7M06S0tIrs"
+BOT_TOKEN = os.getenv("BOT_TOKEN", "8306200181:AAHP56BkD6eZOcqjI6MZNrMdU7M06S0tIrs")
 BLOCKONOMICS_KEY = os.getenv("BLOCKONOMICS_KEY", "Z3iMV7YBEl9dk6yla6j8YDT3zNvAkho4MyQ27ridgnI")
 WELCOME_VIDEO_URL = "https://ik.imagekit.io/myrnjevjk/game%20over.mp4?updatedAt=1754980438031"
 
