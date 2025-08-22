@@ -1,3 +1,4 @@
+SANDBOX_MODE = True  # Set to False for real BTC payments
 import os
 import json
 import logging
