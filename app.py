@@ -21,20 +21,20 @@ WELCOME_VIDEO_URL = "https://ik.imagekit.io/myrnjevjk/game%20over.mp4?updatedAt=
 # LEGITIMATE SHOP DATA
 # =========================
 CATEGORIES = {
-    "courses": {
-        "emoji": "📚",
+    "scampages": {
+        "emoji": "💻",
         "items": {
             "web_dev": {
                 "name": "Complete Web Development Course",
                 "price": 49,
-                "emoji": "💻",
+                "emoji": "💾",
                 "file": "files/web_dev_course.zip",
                 "description": "Learn HTML, CSS, JavaScript, and React from scratch"
             },
             "python_basics": {
                 "name": "Python Programming Fundamentals",
                 "price": 39,
-                "emoji": "🐍",
+                "emoji": "💵",
                 "file": "files/python_course.zip",
                 "description": "Master Python programming with hands-on projects"
             },
@@ -91,7 +91,7 @@ CATEGORIES = {
             "design_assets": {
                 "name": "Design Assets Pack",
                 "price": 30,
-                "emoji": "🎭",
+                "emoji": "🖱️",
                 "file": "files/design_assets.zip",
                 "description": "Icons, fonts, and graphics for designers"
             },
@@ -174,7 +174,7 @@ async def show_main_menu(query=None, update=None):
     keyboard.append([InlineKeyboardButton("📞 Support", callback_data="support")])
     
     reply_markup = InlineKeyboardMarkup(keyboard)
-    text = "🛒 *Welcome to Digital Store*\n\nChoose a category to browse our products:"
+    text = "🛒 *Welcome to TTW'S Null_Bot ☠️*\n\nChoose a category to browse our products:"
     
     if query:
         await query.edit_message_text(text=text, reply_markup=reply_markup, parse_mode="Markdown")
@@ -184,7 +184,7 @@ async def show_main_menu(query=None, update=None):
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle /start command"""
     user = update.effective_user
-    welcome_text = f"👋 Welcome {user.first_name}!\n\n🛒 *Digital Store Bot*\n\nWe offer high-quality digital products including courses, templates, ebooks, and tools to help you succeed!"
+    welcome_text = f"👋 Welcome {user.first_name}!\n\n🛒 *TTW'S Null_Bot*\n\nWe offer high-quality digital products to help you tax the world for profit and lulz 🤡"
     
     # Try to send welcome video if URL is provided
     if WELCOME_VIDEO_URL:
@@ -256,7 +256,7 @@ We provide high-quality digital products to help you tax the world for profit an
 🎓 **ScamPages**: The highest quality coded scampages on the darkweb just add tele bot token
 🎨 **Tutorials**: Freshly hacked from a major DB hack by @therealdysthemix current to 24/25
 📚 **Data**: Fullz, Profiles, CVV's and other data freshly spammed
-🛠️ **Tools**: Spamming, hacking, carding and other kinds of tools
+🛠️ **Tools**: Spamming, hacking, carding, AI JailBreaks and other kinds of tools
 
 All products are:
 ✅ Instantly downloadable
@@ -288,13 +288,13 @@ Need help? We're here for you!
 ⏰ **Hours**: 9 AM - 12 AM MST
 
 **Common Questions:**
-• Products are delivered instantly after payment
-• All sales are final (digital products)
-• Technical support included with purchase
+• Products are delivered instantly after payment (1 confirmation needed)
+• All sales are final NO EXCEPTIONS
+• Limited support offered but don't buy if you don't know how to use
 • Bulk discounts available for multiple items
 
 **Payment Issues:**
-If you experience payment problems, contact us with your transaction details."""
+If you experience payment problems, contact @therealdysthemix with your transaction details."""
 
     keyboard = [[InlineKeyboardButton("⬅️ Back to Menu", callback_data="back:main")]]
     
@@ -346,7 +346,7 @@ async def buy_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 `{address}`
 
 ⚠️ **Important:**
-• Send EXACTLY {amount_btc} BTC
+• 🚨 Send EXACTLY {amount_btc} BTC 🚨
 • Payment will be verified automatically
 • Product delivered instantly after confirmation
 • Do not send from an exchange (use personal wallet)
