@@ -3,7 +3,8 @@ import json
 import logging
 import aiohttp
 from io import BytesIO
-from telegram import Update
+from fastapi import FastAPI, Request
+from telegram import Update, Bot
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 
 # CONFIG
@@ -23,7 +24,7 @@ if not os.path.exists(ADDRESS_FILE):
     with open(ADDRESS_FILE, "w") as f:
         json.dump([], f)
 
-# BTC generation
+# BTC generation functions (same as before)
 async def generate_btc_address():
     url = "https://www.blockonomics.co/api/new_address"
     headers = {"Authorization": f"Bearer {BLOCKONOMICS_API_KEY}"}
@@ -31,19 +32,17 @@ async def generate_btc_address():
         async with aiohttp.ClientSession() as session:
             async with session.get(url, headers=headers) as resp:
                 if resp.status == 200:
-                    data = await resp.json()
-                    return data.get("address")
-                logger.warning(f"BTC API returned status {resp.status}")
+                    return (await resp.json()).get("address")
     except Exception as e:
         logger.error(f"BTC generation failed: {e}")
     return None
 
 async def get_btc_address_with_retry():
+    import asyncio
     for attempt in range(1, RETRIES + 1):
         addr = await generate_btc_address()
         if addr:
             return addr
-        logger.info(f"Retry {attempt}/{RETRIES} failed, waiting {RETRY_DELAY}s...")
         await asyncio.sleep(RETRY_DELAY)
     return None
 
@@ -58,15 +57,12 @@ def store_btc_address(address, user_id):
 async def test_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     await update.message.reply_text("⏳ Generating BTC address...")
-
     btc_address = await get_btc_address_with_retry()
     if not btc_address:
         await update.message.reply_text("⚠️ Error generating BTC address. Try again later.")
         return
-
     store_btc_address(btc_address, user_id)
 
-    # Stream remote video
     try:
         async with aiohttp.ClientSession() as session:
             async with session.get(VIDEO_URL) as resp:
@@ -81,24 +77,22 @@ async def test_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
                         parse_mode="Markdown"
                     )
                     return
-                else:
-                    logger.warning(f"Video URL returned status {resp.status}")
     except Exception as e:
         logger.error(f"Failed to fetch video: {e}")
-
     await update.message.reply_text(
         f"✅ Your BTC address: `{btc_address}`\n⚠️ Could not load video.",
         parse_mode="Markdown"
     )
 
-# Main
-app = ApplicationBuilder().token(BOT_TOKEN).build()
-app.add_handler(CommandHandler("test", test_command))
+# --- FastAPI webhook ---
+app = FastAPI()
+bot_app = ApplicationBuilder().token(BOT_TOKEN).build()
+bot_app.add_handler(CommandHandler("test", test_command))
+bot = Bot(BOT_TOKEN)
 
-# Run webhook directly (do NOT use asyncio.run)
-app.run_webhook(
-    listen="0.0.0.0",
-    port=PORT,
-    url_path=BOT_TOKEN,  # correct for v21+
-    webhook_url=f"https://YOUR_RENDER_APP_NAME.onrender.com/{BOT_TOKEN}"
-)
+@app.post(f"/{BOT_TOKEN}")
+async def telegram_webhook(req: Request):
+    payload = await req.json()
+    update = Update.de_json(payload, bot)
+    await bot_app.update_queue.put(update)
+    return {"ok": True}
