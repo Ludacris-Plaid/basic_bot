@@ -96,11 +96,11 @@ async def main():
     app = ApplicationBuilder().token(BOT_TOKEN).build()
     app.add_handler(CommandHandler("test", test_command))
 
-    # Render webhook
+    # Run webhook (Render-ready)
     await app.run_webhook(
         listen="0.0.0.0",
         port=PORT,
-        webhook_path=f"/{BOT_TOKEN}",
+        url_path=BOT_TOKEN,  # <-- corrected
         webhook_url=f"https://YOUR_RENDER_APP_NAME.onrender.com/{BOT_TOKEN}"
     )
 
