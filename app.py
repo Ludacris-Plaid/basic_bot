@@ -174,7 +174,7 @@ async def show_main_menu(query=None, update=None):
     keyboard.append([InlineKeyboardButton("📞 Support", callback_data="support")])
     
     reply_markup = InlineKeyboardMarkup(keyboard)
-    text = "🛒 *Welcome to TTW'S Null_Bot ☠️*\n\nChoose a category to browse our products:"
+    text = " *☠️ Null_Bot ☠️*\n\nChoose a category to browse our products:"
     
     if query:
         await query.edit_message_text(text=text, reply_markup=reply_markup, parse_mode="Markdown")
@@ -249,7 +249,7 @@ async def about_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
     
-    about_text = """☠️*TTW's Null_Bot*
+    about_text = """☠️*TTW's Null_Bot*☠️
 
 🚨 We provide high-quality digital products to help you tax the world for profit and lulz:
 
@@ -282,8 +282,7 @@ async def support_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     support_text = """📞 *Customer Support*
 
 Need help? We're here for you!
-
-📧 **Email**: dayglowgiggles@proton.me
+🌐 **TTW**: https://t.me/+H3kjnFBN8QUxZjlh
 💬 **Telegram**: @therealdysthemix
 ⏰ **Hours**: 9 AM - 12 AM MST
 
