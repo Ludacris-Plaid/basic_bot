@@ -1,13 +1,13 @@
 import os
 import json
 import logging
-from telegram import Update, InputFile
+from telegram import Update, InputFile, Bot
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
-import aiohttp
 from aiohttp import web
+import aiohttp
 
 # =========================
-# CONFIG - using provided credentials
+# CONFIG
 BOT_TOKEN = "8306200181:AAHP56BkD6eZOcqjI6MZNrMdU7M06S0tIrs"
 BLOCKONOMICS_API_KEY = "upSaWm3RiAS60lWT8One1HCIiprfDnJADadJE8z3e0c"
 VIDEO_PATH = "https://ik.imagekit.io/myrnjevjk/game%20over.mp4?updatedAt=1754980438031"
@@ -17,20 +17,18 @@ RETRIES = 3
 RETRY_DELAY = 2
 # =========================
 
-# Logging
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
 )
 logger = logging.getLogger(__name__)
 
-# Ensure JSON storage exists
+# Ensure address file exists
 if not os.path.exists(ADDRESS_FILE):
     with open(ADDRESS_FILE, "w") as f:
         json.dump([], f)
 
 # --- BTC generator ---
 async def generate_btc_address():
-    """Generate BTC address using Blockonomics API."""
     url = "https://www.blockonomics.co/api/new_address"
     headers = {"Authorization": f"Bearer {BLOCKONOMICS_API_KEY}"}
 
@@ -47,17 +45,16 @@ async def generate_btc_address():
         logger.error(f"BTC generation failed: {e}")
         return None
 
-async def get_btc_address_with_retry(retries=RETRIES, delay=RETRY_DELAY):
-    for attempt in range(1, retries + 1):
+async def get_btc_address_with_retry():
+    for attempt in range(1, RETRIES + 1):
         addr = await generate_btc_address()
         if addr:
             return addr
-        logger.info(f"Retry {attempt}/{retries} failed, waiting {delay}s...")
-        await asyncio.sleep(delay)
+        logger.info(f"Retry {attempt}/{RETRIES} failed, waiting {RETRY_DELAY}s...")
+        await asyncio.sleep(RETRY_DELAY)
     return None
 
 def store_btc_address(address, user_id):
-    """Store generated BTC addresses for tracking."""
     with open(ADDRESS_FILE, "r+") as f:
         data = json.load(f)
         data.append({"user_id": user_id, "address": address})
@@ -88,28 +85,31 @@ async def test_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             parse_mode="Markdown",
         )
 
-# --- Webhook setup for Render ---
+# --- Webhook setup ---
 async def main():
     app = ApplicationBuilder().token(BOT_TOKEN).build()
     app.add_handler(CommandHandler("test", test_command))
 
-    # Use aiohttp server for Render webhook
+    # Aiohttp server for Render
     async def handle(request):
-        update = Update.de_json(await request.json(), app.bot)
+        data = await request.json()
+        update = Update.de_json(data, app.bot)
         await app.update_queue.put(update)
         return web.Response(text="ok")
 
-    runner = web.AppRunner(web.Application())
+    web_app = web.Application()
+    web_app.router.add_post(f"/{BOT_TOKEN}", handle)
+    runner = web.AppRunner(web_app)
     await runner.setup()
     site = web.TCPSite(runner, "0.0.0.0", PORT)
-    logger.info(f"Production bot running on port {PORT}")
     await site.start()
+    logger.info(f"Bot webhook listening on port {PORT}")
 
-    # Start Telegram application
+    # Start Application
     await app.initialize()
     await app.start()
-    await app.updater.start_polling()  # queue processor
-    await app.updater.idle()
+    await app.updater.start()
+    await app.updater.wait_closed()
 
 if __name__ == "__main__":
     import asyncio
